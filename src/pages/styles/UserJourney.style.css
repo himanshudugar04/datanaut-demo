@@ -1,0 +1,126 @@
+.dateClass {
+    color: rgb(255, 255, 255);
+}
+
+span.dateClass.vertical-timeline-element-date {
+    font-family: monospace;
+    font-weight: bolder;
+}
+
+.jsonEventsParams {
+    overflow: auto;
+    padding: 8px;
+    background: ghostwhite;
+    color: black;
+    border-radius: 8px;
+    margin-top: 1rem;
+    font-family: monospace;
+}
+
+.latency {
+    display: inline-flex;
+    justify-content: end;
+    width: -webkit-fill-available;
+    color: #15d09c;
+    font-family: monospace;
+}
+
+.glassMorphism-UI {
+    background-color: black;
+}
+
+.modalHeading {
+    position: relative;
+    padding-bottom: 5px;
+    margin: 18px 0px 0px 0px;
+    background: white;
+    color: black;
+    font-weight: 600;
+    padding: 0.5rem;
+    border-radius: 8px 8px 0px 0px;
+    text-align: center;
+}
+
+.custom-select {
+    text-transform: none;
+    background: black;
+    font-weight: 600;
+    outline: none;
+    border: none;
+}
+
+.custom-select option {
+    background-color: #1f2937;
+    color: white;
+}
+
+.filter-container {
+    padding: 1rem;
+    color: #15cf9b;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    /* border: 0.2px solid white; */
+    border-radius: 8px;
+    width: fit-content;
+    box-shadow: 0 8px 32px 0 #1f2937;
+    margin: auto;
+}
+
+.filterLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vertical-timeline {
+    width: 95%;
+    max-width: 800px;
+    margin: 2rem auto;
+    position: relative;
+    padding: 2em 0;
+}
+
+.vertical-timeline-element {
+    margin: 4em 0;
+}
+
+.timeline {
+    width: 18rem;
+}
+
+p.latency_APP {
+    background: black;
+    position: absolute;
+    top: -42px;
+    right: -75px;
+}
+
+p.latency_API {
+    background: black;
+    position: absolute;
+    top: -42px;
+    left: -75px;
+}
+
+span.dateClass.vertical-timeline-element-date {
+    padding: 0.8em 1em;
+}
+
+div#event-name-filter {
+    width: 18rem;
+}
+
+.custom-scrollbar {
+    overflow: auto;
+}
+
+td {
+    text-wrap: pretty;
+}
+.timeLineContent {
+    padding: 1.5em;
+}
+.vertical-timeline-element-content.bounce-in {
+    padding: 0;
+}
