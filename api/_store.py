@@ -18,6 +18,7 @@ API_VERSION = "13"
 
 _lock = threading.Lock()
 _cache = {"data": None, "at": 0.0}
+status = {"last_error": None, "last_write": None}
 CACHE_SECONDS = 3
 
 
@@ -34,18 +35,29 @@ def backend_name():
     return "vercel-blob" if _token() else "local-file"
 
 
+def _api_headers(token):
+    return {
+        "authorization": f"Bearer {token}",
+        "x-api-version": API_VERSION,
+        "x-vercel-blob-store-id": _store_id(token),
+    }
+
+
 def _blob_read():
+    """Find the index blob via the list API (as the official SDK does), then download it."""
     token = _token()
-    store = _store_id(token)
-    url = f"https://{store}.private.blob.vercel-storage.com/{INDEX_PATH}?cache=0"
+    q = urllib.parse.urlencode({"prefix": INDEX_PATH, "limit": "10"})
+    req = urllib.request.Request(f"{API_BASE}?{q}", headers=_api_headers(token))
+    with urllib.request.urlopen(req, timeout=15) as r:
+        listing = json.loads(r.read().decode("utf-8"))
+    blobs = [b for b in listing.get("blobs", []) if b.get("pathname") == INDEX_PATH]
+    if not blobs:
+        return []
+    url = blobs[0]["url"]
+    url += ("&" if "?" in url else "?") + "cache=0"
     req = urllib.request.Request(url, headers={"authorization": f"Bearer {token}"})
-    try:
-        with urllib.request.urlopen(req, timeout=15) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return []
-        raise
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read().decode("utf-8"))
 
 
 def _blob_write(items):
@@ -53,9 +65,7 @@ def _blob_write(items):
     body = json.dumps(items).encode("utf-8")
     url = f"{API_BASE}/?{urllib.parse.urlencode({'pathname': INDEX_PATH})}"
     req = urllib.request.Request(url, data=body, method="PUT", headers={
-        "authorization": f"Bearer {token}",
-        "x-api-version": API_VERSION,
-        "x-vercel-blob-store-id": _store_id(token),
+        **_api_headers(token),
         "x-vercel-blob-access": "private",
         "x-add-random-suffix": "0",
         "x-allow-overwrite": "1",
@@ -63,7 +73,8 @@ def _blob_write(items):
         "content-type": "application/json",
     })
     with urllib.request.urlopen(req, timeout=20) as r:
-        r.read()
+        result = json.loads(r.read().decode("utf-8") or "{}")
+    status["last_write"] = {"pathname": result.get("pathname"), "at": time.time()}
 
 
 def _local_read():
@@ -82,7 +93,13 @@ def load_all(fresh=False):
     now = time.time()
     if not fresh and _cache["data"] is not None and now - _cache["at"] < CACHE_SECONDS:
         return list(_cache["data"])
-    items = _blob_read() if _token() else _local_read()
+    try:
+        items = _blob_read() if _token() else _local_read()
+    except Exception as e:  # surface storage problems in logs and /api/health
+        detail = e.read().decode("utf-8", "ignore")[:300] if hasattr(e, "read") else ""
+        status["last_error"] = f"read: {e} {detail}".strip()
+        print("[store] read failed:", status["last_error"], flush=True)
+        raise
     _cache.update(data=items, at=now)
     return list(items)
 
@@ -95,7 +112,13 @@ def add(record):
             return False
         items.insert(0, record)
         if _token():
-            _blob_write(items)
+            try:
+                _blob_write(items)
+            except Exception as e:
+                detail = e.read().decode("utf-8", "ignore")[:300] if hasattr(e, "read") else ""
+                status["last_error"] = f"write: {e} {detail}".strip()
+                print("[store] write failed:", status["last_error"], flush=True)
+                raise
         else:
             _local_write(items)
         _cache.update(data=items, at=time.time())

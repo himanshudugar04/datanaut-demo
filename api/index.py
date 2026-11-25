@@ -221,6 +221,15 @@ def err(status, error, message=None, **extra):
 
 # ---------------------------------------------------------------- health
 
+def _store_status():
+    try:
+        count = len(_store.load_all(fresh=True))
+    except Exception:
+        count = None
+    return {"saved_datasets": count, **_store.status}
+
+
+
 @app.route("/api/health")
 @app.route("/api/healthz")
 def health():
@@ -229,6 +238,7 @@ def health():
         "status": "ok",
         "database": "duckdb-demo-warehouse",
         "saved_dataset_store": _store.backend_name(),
+        "saved_dataset_store_status": _store_status(),
         "warehouse_built_at": _db["built_at"],
         "warehouse_build_ms": _db["build_ms"],
         "tables": {f"{s}.{t}": v["rows"] for (s, t), v in _db["stats"].items()},
@@ -413,7 +423,8 @@ def get_saved_datasets():
             "column_info": r.get("column_info", []), "created_by": r.get("created_by"),
             "created_at": r.get("created_at"), "is_saved_dataset": True,
         } for r in _store.load_all()])
-    except Exception:
+    except Exception as e:
+        print("[saved-datasets] list failed:", e, flush=True)
         return jsonify([])
 
 
